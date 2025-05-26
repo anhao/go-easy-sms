@@ -1,0 +1,143 @@
+name: 创建 Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # 当推送以 v 开头的标签时触发
+
+permissions:
+  contents: write  # 需要写权限来创建 release
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整历史记录
+
+      - name: 设置 Go 环境
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.18'
+
+      - name: 运行测试
+        run: go test -v ./...
+
+      - name: 获取标签信息
+        id: tag_info
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+
+          # 获取标签注释信息
+          TAG_MESSAGE=$(git tag -l --format='%(contents)' $TAG_NAME)
+          echo "tag_message<<EOF" >> $GITHUB_OUTPUT
+          echo "$TAG_MESSAGE" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: 生成 Release 说明
+        id: release_notes
+        run: |
+          TAG_NAME="${{ steps.tag_info.outputs.tag_name }}"
+          TAG_MESSAGE="${{ steps.tag_info.outputs.tag_message }}"
+
+          # 创建 Release 说明
+          cat > release_notes.md << 'EOF'
+          ## 🎉 Go Easy SMS ${{ steps.tag_info.outputs.tag_name }} 发布
+
+          ${{ steps.tag_info.outputs.tag_message }}
+
+          ### 📦 安装
+
+          ```bash
+          go get github.com/anhao/go-easy-sms@${{ steps.tag_info.outputs.tag_name }}
+          ```
+
+          ### 🚀 快速开始
+
+          ```go
+          package main
+
+          import (
+              "fmt"
+              "log"
+
+              "github.com/anhao/go-easy-sms"
+              "github.com/anhao/go-easy-sms/config"
+              "github.com/anhao/go-easy-sms/message"
+          )
+
+          func main() {
+              // 配置信息
+              cfg := config.NewConfig()
+              cfg.Timeout = 5.0
+              cfg.DefaultGateways = []string{"yunpian", "aliyun"}
+
+              cfg.GatewayConfigs = map[string]map[string]any{
+                  "yunpian": {
+                      "api_key":   "your-api-key",
+                      "signature": "【默认签名】",
+                  },
+                  "aliyun": {
+                      "access_key_id":     "your-access-key-id",
+                      "access_key_secret": "your-access-key-secret",
+                      "sign_name":         "your-sign-name",
+                  },
+              }
+
+              // 创建 EasySms 实例
+              sms := easysms.New(cfg)
+
+              // 发送短信
+              results, err := sms.Send(
+                  message.NewPhoneNumber("13800138000"),
+                  message.NewMessage().
+                      SetContent("您的验证码为: 6379").
+                      SetTemplate("SMS_001").
+                      SetData(map[string]any{"code": "6379"}),
+              )
+
+              if err != nil {
+                  log.Fatalf("Failed to send message: %v", err)
+              }
+
+              // 处理结果
+              for gateway, result := range results {
+                  if result.Status == easysms.StatusSuccess {
+                      fmt.Printf("Successfully sent message via %s\n", gateway)
+                  } else {
+                      fmt.Printf("Failed to send message via %s: %v\n", gateway, result.Error)
+                  }
+              }
+          }
+          ```
+
+          ### 📋 环境要求
+
+          - Go 1.18+
+
+          ### 🤝 贡献
+
+          欢迎提交 Issue 和 Pull Request！
+
+          ### 📄 许可证
+
+          MIT License
+          EOF
+
+      - name: 创建 Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag_info.outputs.tag_name }}
+          name: ${{ steps.tag_info.outputs.tag_name }} - Go Easy SMS 发布
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+
+      - name: 通知发布成功
+        run: |
+          echo "✅ Release ${{ steps.tag_info.outputs.tag_name }} 创建成功！"
+          echo "🔗 查看 Release: https://github.com/anhao/go-easy-sms/releases/tag/${{ steps.tag_info.outputs.tag_name }}"
