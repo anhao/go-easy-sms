@@ -128,7 +128,7 @@ jobs:
           EOF
 
       - name: 创建 Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag_info.outputs.tag_name }}
           name: ${{ steps.tag_info.outputs.tag_name }} - Go Easy SMS 发布
