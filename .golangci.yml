@@ -1,0 +1,23 @@
+# This is the configuration for golangci-lint for the restic project.
+#
+# A sample config with all settings is here:
+# https://github.com/golangci/golangci-lint/blob/master/.golangci.example.yml
+version: "2"
+
+linters:
+  enable:
+    - govet
+    - staticcheck
+    - errcheck
+    - ineffassign
+    - unused
+  exclusions:
+    rules: []
+    paths-except:
+      - vendor
+      - cmd/example
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
