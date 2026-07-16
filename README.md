@@ -51,6 +51,7 @@
 - [网易云信](https://yunxin.163.com/sms)
 - [云之讯](https://www.ucpaas.com/index.html)
 - [移动云MAS](https://mas.10086.cn/)
+- [飞鸽云](https://www.feige.cn/)
 
 ## 环境需求
 
@@ -1227,6 +1228,39 @@ results, err := sms.Send(message.NewPhoneNumber("13800138000"), message.NewMessa
 
 ```go
 results, err := sms.Send(message.NewPhoneNumber("13800138000"), message.NewMessage().
+    SetContent("您的验证码为: 6379，有效期为5分钟。"))
+```
+
+### [飞鸽云](https://www.feige.cn/)
+
+支持两种发送方式：设置 `template` + `data` 使用模板短信（推荐）；仅设置 `content` 使用自定义短信（需人工审核）。
+
+```go
+"feige": {
+    "api_key":     "your-api-key",     // 平台分配的 API Key（通知类、营销类各自独立，不可混用）
+    "api_secret":  "your-api-secret",  // 平台分配的 API Secret，用于计算签名
+    "sms_sign_id": 3,                  // 可选，默认签名 ID；自定义短信必填，可在 data 中覆盖
+},
+```
+
+签名规则：`X-Sign = SHA256(api_key + api_secret + X-Timestamp + X-Nonce)`（结果为小写十六进制），组件已自动处理，无需手动计算。
+
+发送示例：
+
+```go
+// 模板短信（推荐）：template 为模板 ID（纯数字），data 为模板变量
+results, err := sms.Send(message.NewPhoneNumber("13800138000"), message.NewMessage().
+    SetTemplate("212").
+    SetData(map[string]any{
+        "code": "123456", // 模板中定义的变量
+
+        // 以下为可选保留字段，不会作为模板变量下发
+        "sms_sign_id": 5,         // 覆盖配置中的签名 ID
+        "user_data":   "biz-123", // 自定义业务数据，报告推送时原样返回
+    }))
+
+// 自定义短信（人工审核）：使用 content 发送
+results, err = sms.Send(message.NewPhoneNumber("13800138000"), message.NewMessage().
     SetContent("您的验证码为: 6379，有效期为5分钟。"))
 ```
 

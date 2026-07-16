@@ -611,6 +611,17 @@ func (e *EasySms) registerBuiltinGatewayCreators() {
 			}
 			return gw, nil
 		},
+		"feige": func(config map[string]any) (gateway.Gateway, error) {
+			gw := gateway.NewFeigeGateway(config)
+			if gw == nil {
+				return nil, &GatewayError{
+					GatewayName: "feige",
+					Operation:   "creation",
+					Err:         errors.New("failed to create feige gateway"),
+				}
+			}
+			return gw, nil
+		},
 	}
 
 	// 批量注册内置网关
